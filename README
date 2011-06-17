@@ -1,0 +1,13 @@
+Terra WebGL
+-----------
+
+Aplicació 3D en un entorn web, per poder visualitzar una esfera, representant la Terra, 
+carregant els mapes del servidor OpenStreetMap. L'usuari podrà controlar la càmera, podent 
+veure qualsevol part de la Terra. A més a més, l'aplicació inclou un control Html, per poder 
+buscar poblacions, aixì com poder introduir coordenades de latitud y longitud y obtenir un 
+llistat de posibles llocs.
+
+
+ - Mapes obtinguts  de http://www.OpenStreetMap.org
+ - Servei Nominatim de http://www.OpenStreetMap.org
+
