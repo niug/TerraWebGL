@@ -1,0 +1,174 @@
+<!-- 
+   Copyrigth (C) 2011 RedRibbon (info@terrawebgl.freehostia.com)
+   This file is part of TerraWebGL.
+ 
+   TerraWebGL is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   TerraWebGL is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with TerraWebGL.  If not, see <http://www.gnu.org/licenses/>.
+ -->
+
+<html>
+
+<head>
+<title>Terra WebGL</title>
+<link rel="shortcut icon" type="image/icon" href="favicon.ico"> 
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+<link rel="stylesheet" type="text/css" href="estils.css"/>
+<script type="text/javascript" src="incluir/glMatrix-0.9.5.min.js"></script>
+
+<!-- Perquè funcioni el servei Nominatim, s'ha d'afegir Dojo. Actualment s'afegeix el base, però s'ha de pujar el total -->
+<!--<script src="incluir/dojo-release-1.6.0/dojo/dojo.js" djConfig="parseOnLoad: true"></script>-->
+<script type="text/javascript" src="incluir/dojo.js"></script>
+
+<script type="text/javascript" src="incluir/Camera.js"></script>
+<script type="text/javascript" src="incluir/Controls.js"></script>
+<script type="text/javascript" src="incluir/Utils.js"></script>
+<script type="text/javascript" src="gl/Escena.js"></script>
+<script type="text/javascript" src="gl/Esfera.js"></script>
+<script type="text/javascript" src="gl/shaders.js"></script>
+<script type="text/javascript" src="textures/Textura.js"></script>
+<script type="text/javascript" src="textures/Tile.js"></script>
+<script type="text/javascript" src="textures/TileCache.js"></script>
+
+
+<script type="text/javascript">
+
+    var gl;
+    function initGL(canvas) {
+        try {
+            gl = canvas.getContext("experimental-webgl");
+            canvas.width  = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            gl.viewportWidth  = canvas.width;
+            gl.viewportHeight = canvas.height;
+            
+        } catch (e) {
+        }
+        if (!gl) {
+            alert("Could not initialise WebGL, sorry :-(");
+        }
+    }
+
+    var shaderProgram;
+
+    var mvMatrix = mat4.create();
+    var pMatrix = mat4.create();
+
+    function setMatrixUniforms() {
+        gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+        gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+    }
+
+    var controladorEvents;
+    var interval;
+    var escena
+
+    function webGLStart() {
+        var canvas = document.getElementById("canvas-WebGL");
+        initGL(canvas);
+        shaderProgram = initShaders(gl);
+        
+        gl.clearColor(0.2, 0.2, 0.2, 1.0);
+        gl.enable(gl.DEPTH_TEST);
+        
+        escena = new Escena(gl, canvas);        
+        escena.dibuixarEscena();
+    }
+    
+    dojo.require("dojo.io.script");
+
+    function submitForm() {
+        var busqueda = dojo.byId('buscador').value;
+        var jsonpArgs = {
+            url: "http://nominatim.openstreetmap.org/search",
+            callbackParamName: "json_callback",
+            content: {
+                format: "json",
+                q: busqueda
+            },
+            load: function(data) {
+                dojo.byId('llista').innerHTML="";
+                if (0 < data.length) {
+                    // Carreguem els 6 primers resultats a un conjunt de opcions desplegable
+                    for(var i=0;i<6 && data[i]!=undefined;i++){
+                        var nodeInsertar = "<li class='element-llista'><a href='#' onclick='mirar("+data[i]['lat']+","+ data[i]['lon']+")'>"+data[i]['display_name']+"</a></li>"; 
+                        dojo.place(nodeInsertar,dojo.byId('llista'), "last");
+                    }
+                } else {
+                    dojo.place("<li>No s'han trobat resultats.</li>",dojo.byId('llista'), "last");
+                }
+            },
+            error: function(error) {
+                alert("no");
+                dojo.byId('contingut').innerHTML = "An unexpected error occurred: " + error;
+            }
+        };
+       dojo.io.script.get(jsonpArgs);
+    }
+    
+    
+    function mirar(lat, lon) {
+        controladorEvents.animarGir(lat, lon);
+    }
+    
+    
+     
+    function amagarMenuLateral() {
+        dojo.style("menu-lateral", "display", "none");
+        dojo.style("menu-tancat", "display", "block");
+    }
+    
+    function mostrarMenuLateral() {
+        dojo.style("menu-lateral", "display", "block");
+        dojo.style("menu-tancat", "display", "none");
+    }
+    
+    function inputActiu() {
+        controladorEvents._inputActiu = true;
+    }
+    
+    function inputInactiu() {
+        controladorEvents._inputActiu = false;
+    }
+    
+    
+
+</script>
+</head>
+
+
+<body onload="webGLStart();">
+    <div id="contingut" style="margin:0 auto 0 auto;width:100%;">
+       <div id="menu-lateral" class="menu-lateral">
+            <br />
+            <img src="logo.png" class="logo" alt="logo"/>
+            <br /><br />
+            Cercar: <input type="text" id="buscador" class="buscador" onFocus="inputActiu();" onBlur="inputInactiu();" onchange="submitForm()"/>
+            <input type="button" id="boto-buscar" value="<<" onClick="amagarMenuLateral();"/>
+            <div class="llistatRespostes" align="left">
+                <ul id="llista" class="llista"></ul>
+            </div>
+       </div>
+       <div id="menu-tancat" class="menu-tancat">
+           <input type="button" value=">>" onClick="mostrarMenuLateral();"/>
+       </div>
+       <div class="logoOSM">
+            <a href="http://www.openstreetmap.org"><img src="logoOSM.gif" width="70" height="40" alt="OpenStreetMap"/></a>
+        </div>
+       <canvas id="canvas-WebGL" class="canvas-WebGL"></canvas>
+       <div id="peu-pagina" class="peu-pagina" align="center"></div>
+    </div>
+    <div id="identDiv"></div>
+</body>
+
+</html>
